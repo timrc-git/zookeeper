@@ -317,7 +317,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                         && id.getId().equals("anyone")) {
                     return;
                 }
-                AuthenticationProvider ap = ProviderRegistry.getProvider(id
+                AuthenticationProvider ap = ProviderRegistry.getProvider(zks, id
                         .getScheme());
                 if (ap != null) {
                     for (Id authId : ids) {
@@ -940,7 +940,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                 boolean authIdValid = false;
                 for (Id cid : authInfo) {
                     AuthenticationProvider ap =
-                        ProviderRegistry.getProvider(cid.getScheme());
+                        ProviderRegistry.getProvider(zks, cid.getScheme());
                     if (ap == null) {
                         LOG.error("Missing AuthenticationProvider for "
                             + cid.getScheme());
@@ -953,7 +953,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                     throw new KeeperException.InvalidACLException(path);
                 }
             } else {
-                AuthenticationProvider ap = ProviderRegistry.getProvider(id.getScheme());
+                AuthenticationProvider ap = ProviderRegistry.getProvider(zks, id.getScheme());
                 if (ap == null || !ap.isValid(id.getId())) {
                     throw new KeeperException.InvalidACLException(path);
                 }

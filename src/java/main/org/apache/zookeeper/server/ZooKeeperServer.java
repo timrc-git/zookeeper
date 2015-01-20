@@ -905,7 +905,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             AuthPacket authPacket = new AuthPacket();
             ByteBufferInputStream.byteBuffer2Record(incomingBuffer, authPacket);
             String scheme = authPacket.getScheme();
-            AuthenticationProvider ap = ProviderRegistry.getProvider(scheme);
+            AuthenticationProvider ap = ProviderRegistry.getProvider(this, scheme);
             Code authReturn = KeeperException.Code.AUTHFAILED;
             if(ap != null) {
                 try {

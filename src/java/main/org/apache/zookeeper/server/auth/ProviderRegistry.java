@@ -18,6 +18,7 @@
 
 package org.apache.zookeeper.server.auth;
 
+import java.lang.reflect.Constructor;
 import java.util.Enumeration;
 import java.util.HashMap;
 
@@ -33,25 +34,36 @@ public class ProviderRegistry {
     private static HashMap<String, AuthenticationProvider> authenticationProviders =
         new HashMap<String, AuthenticationProvider>();
 
-    public static void initialize() {
+    private static void AddProvider(AuthenticationProvider provider) {
+      authenticationProviders.put(provider.getScheme(), provider);
+    }
+
+    public static void initialize(ZooKeeperServer zks) {
         synchronized (ProviderRegistry.class) {
-            if (initialized)
+            if (initialized) {
                 return;
-            IPAuthenticationProvider ipp = new IPAuthenticationProvider();
-            DigestAuthenticationProvider digp = new DigestAuthenticationProvider();
-            authenticationProviders.put(ipp.getScheme(), ipp);
-            authenticationProviders.put(digp.getScheme(), digp);
+            }
+            AddProvider(new IPAuthenticationProvider());
+            AddProvider(new DigestAuthenticationProvider());
             Enumeration<Object> en = System.getProperties().keys();
             while (en.hasMoreElements()) {
                 String k = (String) en.nextElement();
                 if (k.startsWith("zookeeper.authProvider.")) {
                     String className = System.getProperty(k);
                     try {
-                        Class<?> c = ZooKeeperServer.class.getClassLoader()
-                                .loadClass(className);
-                        AuthenticationProvider ap = (AuthenticationProvider) c
-                                .newInstance();
-                        authenticationProviders.put(ap.getScheme(), ap);
+                        @SuppressWarnings("unchecked")
+                        Class<AuthenticationProvider> c = (Class<AuthenticationProvider>)
+                                ZooKeeperServer.class.getClassLoader().loadClass(className);
+                        AuthenticationProvider ap;
+                        Constructor<AuthenticationProvider> constructor = null;
+                        try {
+                            constructor = c.getConstructor(ZooKeeperServer.class);;
+                            ap = (AuthenticationProvider)constructor.newInstance(zks);
+                        } catch (Exception e) {
+                            constructor = c.getConstructor();
+                            ap = (AuthenticationProvider)constructor.newInstance();
+                        }
+                        AddProvider(ap);
                     } catch (Exception e) {
                         LOG.warn("Problems loading " + className,e);
                     }
@@ -61,9 +73,9 @@ public class ProviderRegistry {
         }
     }
 
-    public static AuthenticationProvider getProvider(String scheme) {
+    public static AuthenticationProvider getProvider(ZooKeeperServer zks, String scheme) {
         if(!initialized)
-            initialize();
+            initialize(zks);
         return authenticationProviders.get(scheme);
     }
 
