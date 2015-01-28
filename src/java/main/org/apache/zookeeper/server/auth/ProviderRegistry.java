@@ -54,14 +54,23 @@ public class ProviderRegistry {
                         @SuppressWarnings("unchecked")
                         Class<AuthenticationProvider> c = (Class<AuthenticationProvider>)
                                 ZooKeeperServer.class.getClassLoader().loadClass(className);
-                        AuthenticationProvider ap;
+                        AuthenticationProvider ap = null;
                         Constructor<AuthenticationProvider> constructor = null;
                         try {
+                            // newer auth constructor takes a ZK instance
                             constructor = c.getConstructor(ZooKeeperServer.class);;
-                            ap = (AuthenticationProvider)constructor.newInstance(zks);
-                        } catch (Exception e) {
+                            ap = constructor.newInstance(zks);
+                        } catch (NullPointerException e) {
+                            // retry below
+                        } catch (NoSuchMethodException e) {
+                            // retry below
+                        } catch (NoSuchMethodError e) {
+                            // retry below
+                        }
+                        if (ap == null) {
+                            // retry with original no-argument constructor
                             constructor = c.getConstructor();
-                            ap = (AuthenticationProvider)constructor.newInstance();
+                            ap = constructor.newInstance();
                         }
                         AddProvider(ap);
                     } catch (Exception e) {
